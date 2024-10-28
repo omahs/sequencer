@@ -56,8 +56,10 @@ fn main() -> io::Result<()> {
             "src/proto/p2p/proto/rpc_transaction.proto",
             "src/proto/p2p/proto/class.proto",
             "src/proto/p2p/proto/event.proto",
+            "src/proto/p2p/proto/executable_transaction.proto",
             "src/proto/p2p/proto/header.proto",
             "src/proto/p2p/proto/state.proto",
+            "src/proto/p2p/proto/temporary_proposal_part.proto", // TODO(guyn): Remove this file
             "src/proto/p2p/proto/transaction.proto",
             "src/proto/p2p/proto/consensus.proto",
         ],

@@ -7,9 +7,12 @@ mod header;
 mod receipt;
 mod rpc_transaction;
 mod state_diff;
+mod temporary_proposal_part;
 #[cfg(test)]
 mod test_instances;
 mod transaction;
+// TODO(guyn): remove executable transaction
+mod executable_transaction;
 
 use papyrus_common::compression_utils::CompressionError;
 use prost::DecodeError;
@@ -22,6 +25,13 @@ pub enum ProtobufConversionError {
     MissingField { field_description: &'static str },
     #[error("Type `{type_description}` should be {num_expected} bytes but it got {value:?}.")]
     BytesDataLengthMismatch { type_description: &'static str, num_expected: usize, value: Vec<u8> },
+    #[error("Type `{type_description}` got unexpected enum variant {value_as_str}")]
+    WrongEnumVariant {
+        type_description: &'static str,
+        value_as_str: String,
+        expected: &'static str,
+        got: &'static str,
+    },
     #[error(transparent)]
     DecodeError(#[from] DecodeError),
     /// For CompressionError and serde_json::Error we put the string of the error instead of the

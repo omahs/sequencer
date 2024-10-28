@@ -12,8 +12,15 @@ use papyrus_network::network_manager::test_utils::{
     MockBroadcastedMessagesSender,
     TestSubscriberChannels,
 };
+use papyrus_network::network_manager::BroadcastTopicClient;
 use papyrus_network_types::network_types::BroadcastedMessageMetadata;
-use papyrus_protobuf::consensus::{ConsensusMessage, ProposalInit, Vote};
+use papyrus_protobuf::consensus::{
+    ConsensusMessage,
+    ProposalInit,
+    ProposalPart,
+    StreamMessage,
+    Vote,
+};
 use papyrus_test_utils::{get_rng, GetTestInstance};
 use starknet_api::block::{BlockHash, BlockNumber};
 use starknet_api::transaction::Transaction;
@@ -37,7 +44,7 @@ mock! {
 
     #[async_trait]
     impl ConsensusContext for TestContext {
-        type ProposalChunk = Transaction;
+        type ProposalPart = ProposalPart;
 
         async fn build_proposal(
             &mut self,
@@ -49,7 +56,7 @@ mock! {
             &mut self,
             height: BlockNumber,
             timeout: Duration,
-            content: mpsc::Receiver<Transaction>
+            content: mpsc::Receiver<ProposalPart>
         ) -> oneshot::Receiver<ProposalContentId>;
 
         async fn repropose(
@@ -70,6 +77,7 @@ mock! {
             precommits: Vec<Vote>,
         ) -> Result<(), ConsensusError>;
     }
+
 }
 
 async fn send(sender: &mut MockBroadcastedMessagesSender<ConsensusMessage>, msg: ConsensusMessage) {

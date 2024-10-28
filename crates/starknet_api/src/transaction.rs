@@ -126,6 +126,57 @@ impl From<crate::executable_transaction::Transaction> for Transaction {
     }
 }
 
+// TODO(guyn): this isn't an efficient or even fully correct way to do this conversion.
+// At some point we should have a service that compiles a "regular" transaction into
+// an executable transaction. We would also have a better name for "regular" transactions.
+impl Transaction {
+    /// Convert a transaction to an executable transaction.
+    /// This is wrong and should never be used. That's why it's called "spoof".
+    /// After we are done sorting out the different transactions and figure out
+    /// exactly where to convert them from one type to another, we will remove this.
+    pub fn spoof_compile_to_executable(
+        tx: Transaction,
+        chain_id: &ChainId,
+        transaction_version: &TransactionVersion,
+    ) -> crate::executable_transaction::Transaction {
+        match tx {
+            Transaction::L1Handler(_) => {
+                unimplemented!("L1Handler transactions are not supported yet.")
+            }
+            Transaction::Declare(_) => {
+                unimplemented!(
+                    "Cannot convert Declare from executable (CASM) to external (SIERRA) \
+                     transactions."
+                )
+            }
+            Transaction::Deploy(_tx) => {
+                unimplemented!("Cannot convert a Deploy to a DeployAccount.")
+            }
+            Transaction::DeployAccount(tx) => {
+                let contract_address = ContractAddress::default(); // TODO(guyn): this is a placeholder
+                let tx_hash = tx.calculate_transaction_hash(chain_id, transaction_version).unwrap();
+                crate::executable_transaction::Transaction::Account(
+                    crate::executable_transaction::AccountTransaction::DeployAccount(
+                        crate::executable_transaction::DeployAccountTransaction {
+                            tx,
+                            tx_hash,
+                            contract_address,
+                        },
+                    ),
+                )
+            }
+            Transaction::Invoke(tx) => {
+                let tx_hash = tx.calculate_transaction_hash(chain_id, transaction_version).unwrap();
+                crate::executable_transaction::Transaction::Account(
+                    crate::executable_transaction::AccountTransaction::Invoke(
+                        crate::executable_transaction::InvokeTransaction { tx, tx_hash },
+                    ),
+                )
+            }
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Default)]
 pub struct TransactionOptions {
     /// Transaction that shouldn't be broadcasted to StarkNet. For example, users that want to

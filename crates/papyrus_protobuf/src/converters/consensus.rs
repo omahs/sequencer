@@ -5,6 +5,7 @@ use std::convert::{TryFrom, TryInto};
 
 use prost::Message;
 use starknet_api::block::{BlockHash, BlockNumber};
+use starknet_api::executable_transaction::Transaction as ExecutableTransaction;
 use starknet_api::hash::StarkHash;
 use starknet_api::transaction::Transaction;
 
@@ -16,6 +17,8 @@ use crate::consensus::{
     ProposalPart,
     StreamMessage,
     StreamMessageBody,
+    TemporaryProposalPart,
+    TemporaryTransactionBatch,
     TransactionBatch,
     Vote,
     VoteType,
@@ -233,7 +236,7 @@ impl TryFrom<protobuf::TransactionBatch> for TransactionBatch {
             .transactions
             .into_iter()
             .map(|tx| tx.try_into())
-            .collect::<Result<Vec<Transaction>, ProtobufConversionError>>()?;
+            .collect::<Result<Vec<ExecutableTransaction>, ProtobufConversionError>>()?;
         Ok(TransactionBatch { transactions })
     }
 }
@@ -304,6 +307,7 @@ impl From<ProposalPart> for protobuf::ProposalPart {
 
 auto_impl_into_and_try_from_vec_u8!(ProposalPart, protobuf::ProposalPart);
 
+// TODO(guyn): remove this once we are happy with how proposals are sent separate from votes.
 impl TryFrom<protobuf::ConsensusMessage> for ConsensusMessage {
     type Error = ProtobufConversionError;
 
@@ -335,3 +339,66 @@ impl From<ConsensusMessage> for protobuf::ConsensusMessage {
 }
 
 auto_impl_into_and_try_from_vec_u8!(ConsensusMessage, protobuf::ConsensusMessage);
+
+// TODO(guyn): the use of executable transactions over the network is a temporary placeholder.
+// We should replace this as soon as we have the correct transactions and conversions.
+
+impl TryFrom<protobuf::TemporaryTransactionBatch> for TemporaryTransactionBatch {
+    type Error = ProtobufConversionError;
+    fn try_from(value: protobuf::TemporaryTransactionBatch) -> Result<Self, Self::Error> {
+        let transactions = value
+            .transactions
+            .into_iter()
+            .map(|tx| tx.try_into())
+            .collect::<Result<Vec<Transaction>, ProtobufConversionError>>()?;
+        Ok(TemporaryTransactionBatch { transactions })
+    }
+}
+
+impl From<TemporaryTransactionBatch> for protobuf::TemporaryTransactionBatch {
+    fn from(value: TemporaryTransactionBatch) -> Self {
+        let transactions = value.transactions.into_iter().map(Into::into).collect();
+        protobuf::TemporaryTransactionBatch { transactions }
+    }
+}
+
+auto_impl_into_and_try_from_vec_u8!(TemporaryTransactionBatch, protobuf::TemporaryTransactionBatch);
+
+impl TryFrom<protobuf::TemporaryProposalPart> for TemporaryProposalPart {
+    type Error = ProtobufConversionError;
+    fn try_from(value: protobuf::TemporaryProposalPart) -> Result<Self, Self::Error> {
+        use protobuf::temporary_proposal_part::Message;
+
+        let Some(part) = value.message else {
+            return Err(ProtobufConversionError::MissingField { field_description: "part" });
+        };
+
+        match part {
+            Message::Init(init) => Ok(TemporaryProposalPart::Init(init.try_into()?)),
+            Message::Transactions(content) => {
+                Ok(TemporaryProposalPart::Transactions(content.try_into()?))
+            }
+            Message::Fin(fin) => Ok(TemporaryProposalPart::Fin(fin.try_into()?)),
+        }
+    }
+}
+
+impl From<TemporaryProposalPart> for protobuf::TemporaryProposalPart {
+    fn from(value: TemporaryProposalPart) -> Self {
+        match value {
+            TemporaryProposalPart::Init(init) => protobuf::TemporaryProposalPart {
+                message: Some(protobuf::temporary_proposal_part::Message::Init(init.into())),
+            },
+            TemporaryProposalPart::Transactions(content) => protobuf::TemporaryProposalPart {
+                message: Some(protobuf::temporary_proposal_part::Message::Transactions(
+                    content.into(),
+                )),
+            },
+            TemporaryProposalPart::Fin(fin) => protobuf::TemporaryProposalPart {
+                message: Some(protobuf::temporary_proposal_part::Message::Fin(fin.into())),
+            },
+        }
+    }
+}
+
+auto_impl_into_and_try_from_vec_u8!(TemporaryProposalPart, protobuf::TemporaryProposalPart);
