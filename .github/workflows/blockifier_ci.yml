@@ -52,9 +52,23 @@ jobs:
       # No features - build blockifier without features activated by dependencies in the workspace.
       - run: cargo build -p blockifier
       - run: cargo test -p blockifier
-      # transaction_serde is not activated by any workspace crate; test the build.
-      - run: cargo build -p blockifier --features transaction_serde
-      - run: cargo test -p blockifier --features transaction_serde
       # cairo_native is not activated by any workspace crate; test the build.
       - run: cargo build -p blockifier --features cairo_native
       - run: cargo test -p blockifier --features cairo_native
+
+  blockifier_reexecution:
+    runs-on: starkware-ubuntu-latest-medium
+    if: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/bootstrap
+      # Download the blockifier re-execution test data.
+      - id: auth
+        uses: "google-github-actions/auth@v2"
+        with:
+          credentials_json: ${{ secrets.BLOCKIFIER_REEXECUTION_PRODUCTS_EXT_WRITER_JSON }}
+      - uses: 'google-github-actions/setup-gcloud@v2'
+      - run: echo "REEXECUTION_INPUT_FILES_PREFIX=$(cat ./crates/blockifier_reexecution/src/resources/flow_test_files_prefix)" >> $GITHUB_ENV
+      - run: gcloud storage cp -r gs://blockifier-reexecution-artifacts/$REEXECUTION_INPUT_FILES_PREFIX/* ./crates/blockifier_reexecution/resources/
+      # Run blockifier re-execution tests.
+      - run: cargo test --release --ignored -p blockifier_reexecution
