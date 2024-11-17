@@ -48,34 +48,34 @@ class SequencerNode(Chart):
         )
 
 
-# class SequencerSystem(Chart):
-#     def __init__(
-#         self,
-#         scope: Construct,
-#         name: str,
-#         namespace: str,
-#         system_structure: Dict[str, Dict[str, Any]],
-#     ):
-#         super().__init__(
-#             scope, name, disable_resource_name_hashes=True, namespace=namespace
-#         )
-#         self.mempool = Service(
-#             self,
-#             "mempool",
-#             image="paulbouwer/hello-kubernetes:1.7",
-#             replicas=2,
-#             config=system_structure.config,
-#             health_check=defaults.health_check
-#         )
-#         self.batcher = Service(
-#             self, 
-#             "batcher", 
-#             image="ghost",
-#             port_mappings=[
-#                 PortMapping(name="http", port=80, container_port=2368)
-#             ],
-#             health_check=defaults.health_check
-#         )
+class SequencerSystem(Chart):
+    def __init__(
+        self,
+        scope: Construct,
+        name: str,
+        namespace: str,
+        system_structure: Dict[str, Dict[str, Any]],
+    ):
+        super().__init__(
+            scope, name, disable_resource_name_hashes=True, namespace=namespace
+        )
+        self.mempool = Service(
+            self,
+            "mempool",
+            image="paulbouwer/hello-kubernetes:1.7",
+            replicas=2,
+            config=system_structure.config,
+            health_check=defaults.health_check
+        )
+        self.batcher = Service(
+            self, 
+            "batcher", 
+            image="ghost",
+            port_mappings=[
+                PortMapping(name="http", port=80, container_port=2368)
+            ],
+            health_check=defaults.health_check
+        )
 
 
 app = App(
@@ -84,9 +84,16 @@ app = App(
 
 sequencer_node = SequencerNode(
     scope=app,
-    name="sequencer-node",
+    name="sequencer-node-prod",
+    namespace="sequencer-node"
+)
+
+sequencer_node_dev = SequencerNode(
+    scope=app,
+    name="sequencer-node-dev",
     namespace="sequencer-node-test"
 )
+
 
 # a = SequencerSystem(
 #     scope=app,
