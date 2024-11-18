@@ -7,6 +7,7 @@ from config.sequencer import *
 
 @dataclasses.dataclass
 class ServiceDefaults:
+    name: str
     image: Optional[str] | None = None
     replicas: Optional[int] = 1
     service_type: Optional[ServiceType] | None = None
@@ -70,6 +71,16 @@ sequencer = ServiceDefaults(
                     "sequencer.gcp-integration.sw-dev.io"
                 ],
                 secret_name="sequencer-tls"
+            )
+        ]
+    ),
+    deployment=Deployment(
+        replicas=1,
+        annotations=None,
+        containers=None,
+        volumes=[
+            Volume(
+                name="sequencer-node-configmap"
             )
         ]
     )

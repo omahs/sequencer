@@ -20,6 +20,8 @@ class Service(Construct):
         replicas: int = 1,
         service_type: Optional[ServiceType] = None,
         port_mappings: Optional[Sequence[PortMapping]] = None,
+        deployment: Optional[Deployment] = None,
+        statefulset: Optional[Statefulset] = None,
         config: Optional[Config] = None,
         health_check: Optional[HealthCheck] = None,
         pvc: Optional[PersistentVolumeClaim] = None,
@@ -30,6 +32,8 @@ class Service(Construct):
 
         self.image = image
         self.label = {"app": Names.to_label_value(self, include_hash=False)}
+        self.deployment = deployment
+        self.statefulset = statefulset
         self.replicas = replicas
         self.service_type = service_type
         self.port_mappings = port_mappings
@@ -44,8 +48,9 @@ class Service(Construct):
         
         if config is not None:
             self.get_config_map()
-
-        self.get_deployment()
+            
+        if self.deployment:
+            self.get_deployment()
 
         if ingress is not None:
             self.get_ingress()
@@ -74,7 +79,7 @@ class Service(Construct):
                     spec=k8s.PodSpec(
                         containers=[
                             k8s.Container(
-                                name="sequencer",
+                                name=f"{self.node.id}-container",
                                 image=self.image,
                                 args=self.args or [],
                                 ports=[k8s.ContainerPort(container_port=port_map.container_port) for port_map in self.port_mappings or []],
